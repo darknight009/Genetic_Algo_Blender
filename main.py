@@ -4,6 +4,7 @@ import random
 import pdb
 import math
 import numpy as np
+import copy
 
 
 class puck():
@@ -43,9 +44,9 @@ class puck():
     def fit(self):
         err = self.dist(self.value.location, self.target)
         self.error = err
-        self.fitness = int(((16 ** 2 - err) / 16 ** 2) * 100)
+        self.fitness = 256 - err
         if self.fitness <= 0:
-            self.fitness = 1
+            self.fitness = 0
         return self.fitness
 
 
@@ -96,7 +97,7 @@ def randMove(pop):
         p.path = path
 
 
-def mutate(dna):
+def mutate(dna, rate):
     mvs = []
     for i in range(-1, 2):
         for j in range(-1, 2):
@@ -104,35 +105,55 @@ def mutate(dna):
             if t not in mvs:
                 mvs.append(t)
 
-    if random.random() <= 0.1:
+    if random.random() <= rate:
         dna.path[random.randint(0, 19)] = random.choice(mvs)
     return dna
 
 
 def reproduce(population, gen):
-    mating_pool = []
+    rate = 0.2
+    popfit = []
     for dna in population.value:
-        for i in range(dna.fitness):
-            mating_pool.append(dna)
+        popfit.append(dna.fitness)
 
-    l = len(mating_pool)
+    if len(set(popfit)) == 1:
+        p = [0.1] * population.size
+    else:
+        stdev = np.std(popfit)
+        mean = np.mean(popfit)
+        popfit = [(x - mean) / stdev for x in popfit]
+        mn = min(popfit)
+        mx = max(popfit)
+        rng = mx - mn
+        popfit = [(x - mn) / rng for x in popfit]
+        totwt = sum(popfit)
+        p = [x / totwt for x in popfit]
+    print(p)
+    children = []
+    print([x.value.name for x in population.value])
+    print("+++++++++++++++++")
     for i in range(population.size):
-        A = random.randint(0, l - 1)
-        B = random.randint(0, l - 1)
-        parentA = mating_pool[A]
-        parentB = mating_pool[B]
+        # print([x.value.name for x in population.value])
+        A = np.random.choice(population.size, 1, replace=False, p=p)
+        B = np.random.choice(population.size, 1, replace=False, p=p)
+        parentA = population.value[A]
+        parentB = population.value[B]
 
-        while parentA.path == parentB.path:
-            B -= 1
-            B %= l
-            parentB = mating_pool[B]
-
-        mid = random.randint(0, 19)
+        # while parentA.path == parentB.path:
+        #    B = random.randint(0, population.size-1)
+        #    parentB = population.value[B]
+        mid = 10
+        print("Creating_" + parentA.value.name + "+" + parentB.value.name)
         child = puck(parentA.target, i, gen)
         child.path = parentA.path[:mid] + parentB.path[mid:]
-        child = mutate(child)
-        population.value[i] = child
-        bpy.data.objects.remove(bpy.data.objects["Cube" + str(i) + "_" + str(gen - 1)], True)
+        child = mutate(child, rate)
+        children.append(child)
+    for dna in population.value:
+        bpy.data.objects.remove(bpy.data.objects[dna.value.name], True)
+    population.value = children
+    del popfit
+    del p
+    del children
     return population
 
 
@@ -144,6 +165,7 @@ def moveNew(population):
 
 
 def main():
+    print("+++++++++++++++++++++++++++++++++++++++++++")
     popSize = 10
     mutation = 0.1
     target = mathutils.Vector((0, -16, 0.5))
@@ -165,7 +187,7 @@ def main():
         calcFitness(population)
         for dna in population.value:
             print(dna.error, dna.fitness, dna.value.name)
-            if dna.fitness >= 100:
+            if dna.value.location == target:
                 print("Complete")
                 f = 1
                 break
