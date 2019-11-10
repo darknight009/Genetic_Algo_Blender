@@ -111,7 +111,7 @@ def mutate(dna, rate):
 
 
 def reproduce(population, gen):
-    rate = 0.2
+    rate = 0.1
     popfit = []
     for dna in population.value:
         popfit.append(dna.fitness)
@@ -125,12 +125,12 @@ def reproduce(population, gen):
         mn = min(popfit)
         mx = max(popfit)
         rng = mx - mn
-        popfit = [(x - mn) / rng for x in popfit]
+        popfit = [((x - mn) / rng) * 0.8 + 0.1 for x in popfit]
         totwt = sum(popfit)
         p = [x / totwt for x in popfit]
-    print(p)
+    print("probabilities:", p)
     children = []
-    print([x.value.name for x in population.value])
+    print("population:", [x.value.name for x in population.value])
     print("+++++++++++++++++")
     for i in range(population.size):
         # print([x.value.name for x in population.value])
@@ -150,6 +150,7 @@ def reproduce(population, gen):
         children.append(child)
     for dna in population.value:
         bpy.data.objects.remove(bpy.data.objects[dna.value.name], True)
+        # bpy.data.objects[dna.value.name].hide
     population.value = children
     del popfit
     del p
@@ -175,10 +176,10 @@ def main():
         randMove(population)
     for i in range(1000):
         print("gen = ", i)
-        bpy.data.scenes["Scene"].render.filepath = "/tmp/generation_" + str(i) + ".mpeg"
-        bpy.context.scene.frame_start = 0
-        bpy.context.scene.frame_end = 160
-        bpy.ops.render.render(animation=True, use_viewport=True)
+        # bpy.data.scenes["Scene"].render.filepath = "/tmp/generation_" + str(i) + ".mpeg"
+        # bpy.context.scene.frame_start = 0
+        # bpy.context.scene.frame_end = 200
+        # bpy.ops.render.render(animation=True, use_viewport=True)
         calcFitness(population)
         population = reproduce(population, i)
         print("Reproduced")
@@ -190,6 +191,7 @@ def main():
             if dna.value.location == target:
                 print("Complete")
                 f = 1
+                print(dna.value.name)
                 break
         if f == 1:
             break
